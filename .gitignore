@@ -1,5 +1,11 @@
-_site
-.jekyll-cache
-.sass-cache
 .bundle
 vendor
+Gemfile.lock
+.jekyll-cache
+.jekyll-metadata
+_site
+*.gem
+node_modules
+package-lock.json
+_sass/vendors
+assets/js/dist

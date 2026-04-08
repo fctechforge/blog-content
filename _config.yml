@@ -1,10 +1,85 @@
+theme: jekyll-theme-chirpy
+lang: en
+timezone: Europe/Rome
+
 title: "FC Tech Forge"
-description: "Technical notes, theory, and labs"
+tagline: "Technical notes, theory, and labs"
+description: >-
+  Technical notes, theory articles, and hands-on labs on security, APIs, AI, identity, and systems.
+
 url: "https://fctechforge.github.io"
 baseurl: "/blog-content"
+
+github:
+  username: fctechforge
+
+social:
+  name: FC Tech Forge
+  email:
+  links:
+    - https://github.com/fctechforge
+
 markdown: kramdown
-theme: minima
+theme_mode:
+toc: true
+paginate: 10
+
+kramdown:
+  footnote_backlink: "&#8617;&#xfe0e;"
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: highlight
+    span:
+      line_numbers: false
+    block:
+      line_numbers: true
+      start_line: 1
+
+collections:
+  tabs:
+    output: true
+    sort_by: order
+
+defaults:
+  - scope:
+      path: ""
+      type: posts
+    values:
+      layout: post
+      toc: true
+      permalink: /posts/:title/
+  - scope:
+      path: ""
+      type: tabs
+    values:
+      layout: page
+      permalink: /:title/
+
+sass:
+  style: compressed
+
+compress_html:
+  clippings: all
+  comments: all
+  endings: all
+  blanklines: false
+
 plugins:
+  - jekyll-archives
   - jekyll-feed
   - jekyll-seo-tag
-permalink: /:categories/:year/:month/:day/:title/
+  - jekyll-sitemap
+
+jekyll-archives:
+  enabled: [categories, tags]
+  layouts:
+    category: category
+    tag: tag
+  permalinks:
+    category: /categories/:name/
+    tag: /tags/:name/
+
+exclude:
+  - README.md
+  - LICENSE
+  - tools
