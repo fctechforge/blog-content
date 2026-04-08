@@ -1,0 +1,10 @@
+title: "FC Tech Forge"
+description: "Technical notes, theory, and labs"
+url: "https://fctechforge.github.io"
+baseurl: "/blog-content"
+markdown: kramdown
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+permalink: /:categories/:year/:month/:day/:title/
