@@ -19,6 +19,8 @@ social:
   links:
     - https://github.com/fctechforge
 
+avatar: /assets/img/avatar.svg
+
 markdown: kramdown
 theme_mode: dark
 toc: true
