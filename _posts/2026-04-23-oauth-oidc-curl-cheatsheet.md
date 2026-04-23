@@ -380,14 +380,19 @@ open "$END_SESSION_ENDPOINT?id_token_hint=$ID_TOKEN&post_logout_redirect_uri=$PO
 
 ## Revocation
 
-Use revocation when you want to invalidate an access token.
+Use revocation when you want to invalidate a refresh token or, when the provider supports it, an access token.
 
-<button id="oidc-revoke-token-button" class="btn btn-outline-primary btn-sm" type="button">Revoke Access Token</button>
+Many providers treat access tokens as short-lived bearer credentials and do not allow them to be revoked directly. If access-token revocation returns `unsupported_token_type`, revoke the refresh token instead and let the access token expire.
+
+<button id="oidc-revoke-access-token-button" class="btn btn-outline-primary btn-sm" type="button">Revoke Access Token</button>
+<button id="oidc-revoke-refresh-token-button" class="btn btn-outline-primary btn-sm" type="button">Revoke Refresh Token</button>
 
 <div id="oidc-helper-response-row-revocation" class="mt-2 d-none">
   <p class="mb-1">Revocation response payload:</p>
   <pre><code id="oidc-helper-response-revocation"></code></pre>
 </div>
+
+Revoke the access token if the provider supports access-token revocation:
 
 ```bash
 curl -X POST "$REVOCATION_ENDPOINT" \
@@ -395,6 +400,16 @@ curl -X POST "$REVOCATION_ENDPOINT" \
   -u "$CLIENT_ID:$CLIENT_SECRET" \
   -d "token=$ACCESS_TOKEN" \
   -d "token_type_hint=access_token"
+```
+
+Revoke the refresh token to stop future token renewal:
+
+```bash
+curl -X POST "$REVOCATION_ENDPOINT" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -u "$CLIENT_ID:$CLIENT_SECRET" \
+  -d "token=$REFRESH_TOKEN" \
+  -d "token_type_hint=refresh_token"
 ```
 
 ## PAR, DPoP, and token exchange

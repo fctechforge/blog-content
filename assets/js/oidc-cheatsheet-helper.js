@@ -713,15 +713,18 @@
     setActionResponse("introspection", payload);
   }
 
-  async function revokeToken() {
+  async function revokeToken(tokenType) {
     const metadata = loadMetadata();
     const tokenResponse = loadTokenResponse();
     if (!metadata || !metadata.revocationEndpoint) throw new Error("revocation endpoint is not available");
-    if (!tokenResponse.access_token) throw new Error("access_token is not available");
+
+    const fieldName = tokenType === "refresh_token" ? "refresh_token" : "access_token";
+    const tokenValue = tokenResponse[fieldName];
+    if (!tokenValue) throw new Error(`${fieldName} is not available`);
 
     const body = new URLSearchParams();
-    body.set("token", tokenResponse.access_token);
-    body.set("token_type_hint", "access_token");
+    body.set("token", tokenValue);
+    body.set("token_type_hint", fieldName);
     const payload = await postForm(metadata.revocationEndpoint, body, true);
     setActionResponse("revocation", payload);
   }
@@ -939,7 +942,8 @@
     const clientCredentialsButton = byId("oidc-client-credentials-button");
     const callApiClientCredentialsButton = byId("oidc-call-api-client-credentials-button");
     const introspectTokenButton = byId("oidc-introspect-token-button");
-    const revokeTokenButton = byId("oidc-revoke-token-button");
+    const revokeAccessTokenButton = byId("oidc-revoke-access-token-button");
+    const revokeRefreshTokenButton = byId("oidc-revoke-refresh-token-button");
     const userinfoButton = byId("oidc-userinfo-button");
     const deviceStartButton = byId("oidc-device-start-button");
     const devicePollButton = byId("oidc-device-poll-button");
@@ -1092,10 +1096,18 @@
       });
     }
 
-    if (revokeTokenButton) {
-      revokeTokenButton.addEventListener("click", function () {
-        revokeToken().catch(function (error) {
+    if (revokeAccessTokenButton) {
+      revokeAccessTokenButton.addEventListener("click", function () {
+        revokeToken("access_token").catch(function (error) {
           setStatus(`Could not revoke the token. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (revokeRefreshTokenButton) {
+      revokeRefreshTokenButton.addEventListener("click", function () {
+        revokeToken("refresh_token").catch(function (error) {
+          setStatus(`Could not revoke the refresh token. (${error.message})`, true);
         });
       });
     }
