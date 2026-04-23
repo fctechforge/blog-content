@@ -4,6 +4,9 @@
   const AUTH_CODE_STORAGE_KEY = "oidc-cheatsheet-auth-code";
   const CODE_VERIFIER_STORAGE_KEY = "oidc-cheatsheet-code-verifier";
   const TOKEN_RESPONSE_STORAGE_KEY = "oidc-cheatsheet-token-response";
+  const AUTH_FLOW_STORAGE_KEY = "oidc-cheatsheet-auth-flow";
+  const DEVICE_CODE_STORAGE_KEY = "oidc-cheatsheet-device-code";
+  const AUTH_REQ_ID_STORAGE_KEY = "oidc-cheatsheet-auth-req-id";
   const originalCode = new WeakMap();
 
   function byId(id) {
@@ -108,6 +111,48 @@
     window.sessionStorage.removeItem(TOKEN_RESPONSE_STORAGE_KEY);
   }
 
+  function loadAuthFlow() {
+    return window.sessionStorage.getItem(AUTH_FLOW_STORAGE_KEY) || "";
+  }
+
+  function saveAuthFlow(flow) {
+    if (flow) {
+      window.sessionStorage.setItem(AUTH_FLOW_STORAGE_KEY, flow);
+    }
+  }
+
+  function clearAuthFlow() {
+    window.sessionStorage.removeItem(AUTH_FLOW_STORAGE_KEY);
+  }
+
+  function loadDeviceCode() {
+    return window.sessionStorage.getItem(DEVICE_CODE_STORAGE_KEY) || "";
+  }
+
+  function saveDeviceCode(code) {
+    if (code) {
+      window.sessionStorage.setItem(DEVICE_CODE_STORAGE_KEY, code);
+    }
+  }
+
+  function clearDeviceCode() {
+    window.sessionStorage.removeItem(DEVICE_CODE_STORAGE_KEY);
+  }
+
+  function loadAuthReqId() {
+    return window.sessionStorage.getItem(AUTH_REQ_ID_STORAGE_KEY) || "";
+  }
+
+  function saveAuthReqId(id) {
+    if (id) {
+      window.sessionStorage.setItem(AUTH_REQ_ID_STORAGE_KEY, id);
+    }
+  }
+
+  function clearAuthReqId() {
+    window.sessionStorage.removeItem(AUTH_REQ_ID_STORAGE_KEY);
+  }
+
   function saveMetadata(values) {
     window.localStorage.setItem(METADATA_STORAGE_KEY, JSON.stringify(values));
   }
@@ -137,8 +182,55 @@
   }
 
   function setCapturedCodeDisplay(code) {
-    const row = byId("oidc-helper-auth-code-row");
-    const node = byId("oidc-helper-auth-code");
+    const flow = loadAuthFlow();
+    const mappings = [
+      { row: byId("oidc-helper-auth-code-row-no-pkce"), code: byId("oidc-helper-auth-code-no-pkce"), flow: "no-pkce" },
+      { row: byId("oidc-helper-auth-code-row-pkce"), code: byId("oidc-helper-auth-code-pkce"), flow: "pkce" }
+    ];
+
+    mappings.forEach(function (entry) {
+      if (!entry.row || !entry.code) return;
+      if (code && entry.flow === flow) {
+        entry.code.textContent = code;
+        entry.row.classList.remove("d-none");
+      } else {
+        entry.code.textContent = "";
+        entry.row.classList.add("d-none");
+      }
+    });
+  }
+
+  function setTokenResponseDisplay(payload) {
+    const flow = loadAuthFlow();
+    const formatted = payload && Object.keys(payload).length > 0 ? JSON.stringify(payload, null, 2) : "";
+    const mappings = [
+      { row: byId("oidc-helper-token-response-row-no-pkce"), code: byId("oidc-helper-token-response-no-pkce"), flow: "no-pkce" },
+      { row: byId("oidc-helper-token-response-row-pkce"), code: byId("oidc-helper-token-response-pkce"), flow: "pkce" }
+    ];
+
+    mappings.forEach(function (entry) {
+      if (!entry.row || !entry.code) return;
+      if (formatted && entry.flow === flow) {
+        entry.code.textContent = formatted;
+        entry.row.classList.remove("d-none");
+      } else {
+        entry.code.textContent = "";
+        entry.row.classList.add("d-none");
+      }
+    });
+  }
+
+  function setActionResponse(name, payload) {
+    const row = byId(`oidc-helper-response-row-${name}`);
+    const node = byId(`oidc-helper-response-${name}`);
+    if (!row || !node) return;
+    node.textContent = JSON.stringify(payload, null, 2);
+    row.classList.remove("d-none");
+  }
+
+  function setDeviceCodeDisplay(code) {
+    const row = byId("oidc-helper-device-code-row");
+    const node = byId("oidc-helper-device-code");
     if (!row || !node) return;
     if (code) {
       node.textContent = code;
@@ -177,6 +269,8 @@
     const authCode = loadAuthCode();
     const codeVerifier = loadCodeVerifier();
     const tokenResponse = loadTokenResponse();
+    const deviceCode = loadDeviceCode();
+    const authReqId = loadAuthReqId();
     const replacements = [
       { from: "https://auth.example.com/.well-known/openid-configuration", to: values.discoveryUrl },
       { from: "https://auth.example.com", to: values.issuer },
@@ -203,6 +297,8 @@
       { from: "$CLIENT_SECRET", to: values.clientSecret || "$CLIENT_SECRET" },
       { from: "$AUTH_CODE", to: authCode || "$AUTH_CODE" },
       { from: "$CODE_VERIFIER", to: codeVerifier || "$CODE_VERIFIER" },
+      { from: "$DEVICE_CODE", to: deviceCode || "$DEVICE_CODE" },
+      { from: "$AUTH_REQ_ID", to: authReqId || "$AUTH_REQ_ID" },
       { from: "$ACCESS_TOKEN", to: tokenResponse.access_token || "$ACCESS_TOKEN" },
       { from: "$REFRESH_TOKEN", to: tokenResponse.refresh_token || "$REFRESH_TOKEN" },
       { from: "$ID_TOKEN", to: tokenResponse.id_token || "$ID_TOKEN" }
@@ -230,8 +326,13 @@
     clearMetadata();
     clearAuthCode();
     clearCodeVerifier();
+    clearAuthFlow();
     clearTokenResponse();
+    clearDeviceCode();
+    clearAuthReqId();
     setCapturedCodeDisplay("");
+    setTokenResponseDisplay(null);
+    setDeviceCodeDisplay("");
     articleCodeNodes().forEach(function (node) {
       const original = originalCode.get(node);
       if (original) {
@@ -382,6 +483,7 @@
     const nonce = randomString(24);
 
     saveCodeVerifier(verifier);
+    saveAuthFlow("pkce");
     saveFormValues(
       Object.assign({}, formValues, {
         redirectUri: redirectUri
@@ -414,7 +516,7 @@
     setStatus("Popup opened. Complete login there and this page will capture the authorization code.", false);
   }
 
-  async function exchangeAuthorizationCode(usePkce) {
+  async function exchangeAuthorizationCode(usePkce, useClientSecret) {
     const metadata = loadMetadata();
     const formValues = loadFormValues();
     const authCode = loadAuthCode();
@@ -427,6 +529,11 @@
 
     if (!authCode) {
       setStatus("No authorization code is available yet. Start the login flow first.", true);
+      return;
+    }
+
+    if (useClientSecret && !formValues.clientSecret) {
+      setStatus("No client secret is available. Fill the client secret field before using the confidential-client exchange.", true);
       return;
     }
 
@@ -446,11 +553,17 @@
 
     setStatus("Exchanging authorization code at the token endpoint...", false);
 
+    const headers = {
+      "Content-Type": "application/x-www-form-urlencoded"
+    };
+
+    if (useClientSecret) {
+      headers.Authorization = `Basic ${window.btoa(`${formValues.clientId || "demo-client"}:${formValues.clientSecret}`)}`;
+    }
+
     const response = await fetch(metadata.tokenEndpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
+      headers,
       body: body.toString()
     });
 
@@ -459,11 +572,13 @@
     });
 
     if (!response.ok) {
+      setTokenResponseDisplay(payload);
       setStatus(`Token exchange failed. The provider may require different client settings or CORS for the token endpoint. (${response.status})`, true);
       return;
     }
 
     saveTokenResponse(payload);
+    setTokenResponseDisplay(payload);
     const latestMetadata = loadMetadata();
     if (latestMetadata) {
       latestMetadata.clientId = formValues.clientId || latestMetadata.clientId || "demo-client";
@@ -474,6 +589,265 @@
       applyValues(latestMetadata);
     }
     setStatus("Token response captured. The downstream commands below now use the returned tokens where applicable.", false);
+  }
+
+  function clientAuthHeader(formValues) {
+    if (!formValues.clientSecret) {
+      return "";
+    }
+    return `Basic ${window.btoa(`${formValues.clientId || "demo-client"}:${formValues.clientSecret}`)}`;
+  }
+
+  async function postForm(url, params, useClientSecret) {
+    const formValues = loadFormValues();
+    const headers = {
+      "Content-Type": "application/x-www-form-urlencoded"
+    };
+
+    if (useClientSecret) {
+      const authHeader = clientAuthHeader(formValues);
+      if (!authHeader) {
+        throw new Error("client_secret is required for this request");
+      }
+      headers.Authorization = authHeader;
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: params.toString()
+    });
+
+    const text = await response.text();
+    let payload;
+    try {
+      payload = text ? JSON.parse(text) : { status: response.status };
+    } catch (_error) {
+      payload = { status: response.status, raw: text };
+    }
+
+    if (!response.ok) {
+      payload.error_status = response.status;
+    }
+
+    return payload;
+  }
+
+  async function refreshToken(useClientSecret) {
+    const metadata = loadMetadata();
+    const formValues = loadFormValues();
+    const tokenResponse = loadTokenResponse();
+    const refreshTokenValue = tokenResponse.refresh_token || "";
+
+    if (!metadata || !metadata.tokenEndpoint) throw new Error("token endpoint is not available");
+    if (!refreshTokenValue) throw new Error("refresh_token is not available");
+
+    const body = new URLSearchParams();
+    body.set("grant_type", "refresh_token");
+    if (!useClientSecret) {
+      body.set("client_id", formValues.clientId || "demo-client");
+    }
+    body.set("refresh_token", refreshTokenValue);
+
+    const payload = await postForm(metadata.tokenEndpoint, body, useClientSecret);
+    setActionResponse("refresh", payload);
+    if (payload.access_token || payload.refresh_token || payload.id_token) {
+      saveTokenResponse(Object.assign({}, tokenResponse, payload));
+      applyValues(loadMetadata());
+    }
+  }
+
+  async function callApi(targetName) {
+    const formValues = loadFormValues();
+    const tokenResponse = loadTokenResponse();
+    const accessToken = tokenResponse.access_token || "";
+    if (!accessToken) throw new Error("access_token is not available");
+
+    const response = await fetch(`${formValues.apiBaseUrl || "https://api.example.com"}/resource`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    });
+    const text = await response.text();
+    let payload;
+    try {
+      payload = text ? JSON.parse(text) : { status: response.status };
+    } catch (_error) {
+      payload = { status: response.status, raw: text };
+    }
+    setActionResponse(targetName, payload);
+  }
+
+  async function clientCredentials() {
+    const metadata = loadMetadata();
+    const formValues = loadFormValues();
+    if (!metadata || !metadata.tokenEndpoint) throw new Error("token endpoint is not available");
+    if (!formValues.clientSecret) throw new Error("client_secret is required");
+
+    const body = new URLSearchParams();
+    body.set("grant_type", "client_credentials");
+    body.set("scope", "api.read");
+
+    const payload = await postForm(metadata.tokenEndpoint, body, true);
+    setActionResponse("client-credentials", payload);
+    if (payload.access_token) {
+      saveTokenResponse(payload);
+      applyValues(loadMetadata());
+    }
+  }
+
+  async function introspectToken() {
+    const metadata = loadMetadata();
+    const tokenResponse = loadTokenResponse();
+    if (!metadata || !metadata.introspectionEndpoint) throw new Error("introspection endpoint is not available");
+    if (!tokenResponse.access_token) throw new Error("access_token is not available");
+
+    const body = new URLSearchParams();
+    body.set("token", tokenResponse.access_token);
+    const payload = await postForm(metadata.introspectionEndpoint, body, true);
+    setActionResponse("introspection", payload);
+  }
+
+  async function revokeToken() {
+    const metadata = loadMetadata();
+    const tokenResponse = loadTokenResponse();
+    if (!metadata || !metadata.revocationEndpoint) throw new Error("revocation endpoint is not available");
+    if (!tokenResponse.access_token) throw new Error("access_token is not available");
+
+    const body = new URLSearchParams();
+    body.set("token", tokenResponse.access_token);
+    body.set("token_type_hint", "access_token");
+    const payload = await postForm(metadata.revocationEndpoint, body, true);
+    setActionResponse("revocation", payload);
+  }
+
+  async function userinfo() {
+    const metadata = loadMetadata();
+    const tokenResponse = loadTokenResponse();
+    if (!metadata || !metadata.userinfoEndpoint) throw new Error("userinfo endpoint is not available");
+    if (!tokenResponse.access_token) throw new Error("access_token is not available");
+
+    const response = await fetch(metadata.userinfoEndpoint, {
+      headers: {
+        Authorization: `Bearer ${tokenResponse.access_token}`
+      }
+    });
+    const payload = await response.json().catch(async function () {
+      return { status: response.status, raw: await response.text() };
+    });
+    setActionResponse("userinfo", payload);
+  }
+
+  async function startDeviceFlow() {
+    const metadata = loadMetadata();
+    const formValues = loadFormValues();
+    if (!metadata || !metadata.deviceAuthorizationEndpoint) throw new Error("device authorization endpoint is not available");
+
+    const body = new URLSearchParams();
+    body.set("client_id", formValues.clientId || "demo-client");
+    body.set("scope", formValues.scopes || "openid profile email");
+    const payload = await postForm(metadata.deviceAuthorizationEndpoint, body, false);
+    if (payload.device_code) {
+      saveDeviceCode(payload.device_code);
+      setDeviceCodeDisplay(payload.device_code);
+      applyValues(loadMetadata());
+    }
+    setActionResponse("device-start", payload);
+  }
+
+  async function pollDeviceFlow() {
+    const metadata = loadMetadata();
+    const formValues = loadFormValues();
+    const deviceCode = loadDeviceCode();
+    if (!metadata || !metadata.tokenEndpoint) throw new Error("token endpoint is not available");
+    if (!deviceCode) throw new Error("device_code is not available");
+
+    const body = new URLSearchParams();
+    body.set("grant_type", "urn:ietf:params:oauth:grant-type:device_code");
+    body.set("device_code", deviceCode);
+    body.set("client_id", formValues.clientId || "demo-client");
+    const payload = await postForm(metadata.tokenEndpoint, body, false);
+    if (payload.access_token || payload.refresh_token || payload.id_token) {
+      saveTokenResponse(payload);
+      applyValues(loadMetadata());
+    }
+    setActionResponse("device-poll", payload);
+  }
+
+  function openLogout() {
+    const metadata = loadMetadata();
+    const formValues = loadFormValues();
+    const tokenResponse = loadTokenResponse();
+    if (!metadata || !metadata.endSessionEndpoint) throw new Error("logout endpoint is not available");
+    const url = new URL(metadata.endSessionEndpoint);
+    if (tokenResponse.id_token) {
+      url.searchParams.set("id_token_hint", tokenResponse.id_token);
+    }
+    url.searchParams.set("post_logout_redirect_uri", formValues.postLogoutRedirectUri || "https://app.example.com/post-logout");
+    window.open(url.toString(), "oidc-helper-logout", "popup=yes,width=540,height=720,resizable=yes,scrollbars=yes");
+  }
+
+  async function par() {
+    const metadata = loadMetadata();
+    const formValues = loadFormValues();
+    if (!metadata || !metadata.parEndpoint) throw new Error("PAR endpoint is not available");
+
+    const body = new URLSearchParams();
+    body.set("client_id", formValues.clientId || "demo-client");
+    body.set("response_type", "code");
+    body.set("redirect_uri", formValues.redirectUri || currentPageUrl());
+    body.set("scope", formValues.scopes || "openid profile email");
+    body.set("state", "demo-state");
+    const payload = await postForm(metadata.parEndpoint, body, true);
+    setActionResponse("par", payload);
+  }
+
+  async function tokenExchange() {
+    const metadata = loadMetadata();
+    const tokenResponse = loadTokenResponse();
+    if (!metadata || !metadata.tokenEndpoint) throw new Error("token endpoint is not available");
+    if (!tokenResponse.access_token) throw new Error("access_token is not available");
+
+    const body = new URLSearchParams();
+    body.set("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange");
+    body.set("subject_token", tokenResponse.access_token);
+    body.set("subject_token_type", "urn:ietf:params:oauth:token-type:access_token");
+    body.set("requested_token_type", "urn:ietf:params:oauth:token-type:access_token");
+    const payload = await postForm(metadata.tokenEndpoint, body, true);
+    setActionResponse("token-exchange", payload);
+  }
+
+  async function cibaStart() {
+    const metadata = loadMetadata();
+    const formValues = loadFormValues();
+    if (!metadata || !metadata.issuer) throw new Error("issuer is not available");
+
+    const body = new URLSearchParams();
+    body.set("scope", formValues.scopes || "openid profile email");
+    body.set("login_hint", "user@example.com");
+    const payload = await postForm(`${metadata.issuer}/backchannel-authentication`, body, true);
+    if (payload.auth_req_id) {
+      saveAuthReqId(payload.auth_req_id);
+      applyValues(loadMetadata());
+    }
+    setActionResponse("ciba-start", payload);
+  }
+
+  async function cibaPoll() {
+    const metadata = loadMetadata();
+    const authReqId = loadAuthReqId();
+    if (!metadata || !metadata.tokenEndpoint) throw new Error("token endpoint is not available");
+    if (!authReqId) throw new Error("auth_req_id is not available");
+
+    const body = new URLSearchParams();
+    body.set("grant_type", "urn:openid:params:grant-type:ciba");
+    body.set("auth_req_id", authReqId);
+    const payload = await postForm(metadata.tokenEndpoint, body, true);
+    if (payload.access_token || payload.refresh_token || payload.id_token) {
+      saveTokenResponse(payload);
+      applyValues(loadMetadata());
+    }
+    setActionResponse("ciba-poll", payload);
   }
 
   function startLogin(usePkce) {
@@ -510,6 +884,7 @@
     }
 
     clearCodeVerifier();
+    saveAuthFlow("no-pkce");
     applyValues(metadata);
 
     const popup = window.open(
@@ -550,7 +925,24 @@
     const startLoginNoPkceButton = byId("oidc-start-login-no-pkce-button");
     const startLoginButton = byId("oidc-start-login-pkce-button");
     const exchangeCodeNoSecretButton = byId("oidc-exchange-code-no-secret-button");
+    const exchangeCodeWithSecretButton = byId("oidc-exchange-code-with-secret-button");
     const exchangeCodePkceNoSecretButton = byId("oidc-exchange-code-pkce-no-secret-button");
+    const exchangeCodePkceWithSecretButton = byId("oidc-exchange-code-pkce-with-secret-button");
+    const refreshTokenNoSecretButton = byId("oidc-refresh-token-no-secret-button");
+    const refreshTokenWithSecretButton = byId("oidc-refresh-token-with-secret-button");
+    const callApiButton = byId("oidc-call-api-button");
+    const clientCredentialsButton = byId("oidc-client-credentials-button");
+    const callApiClientCredentialsButton = byId("oidc-call-api-client-credentials-button");
+    const introspectTokenButton = byId("oidc-introspect-token-button");
+    const revokeTokenButton = byId("oidc-revoke-token-button");
+    const userinfoButton = byId("oidc-userinfo-button");
+    const deviceStartButton = byId("oidc-device-start-button");
+    const devicePollButton = byId("oidc-device-poll-button");
+    const openLogoutButton = byId("oidc-open-logout-button");
+    const parButton = byId("oidc-par-button");
+    const tokenExchangeButton = byId("oidc-token-exchange-button");
+    const cibaStartButton = byId("oidc-ciba-start-button");
+    const cibaPollButton = byId("oidc-ciba-poll-button");
     const resetButton = byId("oidc-reset-button");
     const nodes = articleCodeNodes();
     ensureOriginals(nodes);
@@ -617,16 +1009,154 @@
 
     if (exchangeCodeNoSecretButton) {
       exchangeCodeNoSecretButton.addEventListener("click", function () {
-        exchangeAuthorizationCode(false).catch(function (error) {
+        exchangeAuthorizationCode(false, false).catch(function (error) {
           setStatus(`Could not exchange the authorization code. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (exchangeCodeWithSecretButton) {
+      exchangeCodeWithSecretButton.addEventListener("click", function () {
+        exchangeAuthorizationCode(false, true).catch(function (error) {
+          setStatus(`Could not exchange the authorization code with client secret. (${error.message})`, true);
         });
       });
     }
 
     if (exchangeCodePkceNoSecretButton) {
       exchangeCodePkceNoSecretButton.addEventListener("click", function () {
-        exchangeAuthorizationCode(true).catch(function (error) {
+        exchangeAuthorizationCode(true, false).catch(function (error) {
           setStatus(`Could not exchange the PKCE authorization code. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (exchangeCodePkceWithSecretButton) {
+      exchangeCodePkceWithSecretButton.addEventListener("click", function () {
+        exchangeAuthorizationCode(true, true).catch(function (error) {
+          setStatus(`Could not exchange the PKCE authorization code with client secret. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (refreshTokenNoSecretButton) {
+      refreshTokenNoSecretButton.addEventListener("click", function () {
+        refreshToken(false).catch(function (error) {
+          setStatus(`Could not refresh the token. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (refreshTokenWithSecretButton) {
+      refreshTokenWithSecretButton.addEventListener("click", function () {
+        refreshToken(true).catch(function (error) {
+          setStatus(`Could not refresh the token with client secret. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (callApiButton) {
+      callApiButton.addEventListener("click", function () {
+        callApi("api").catch(function (error) {
+          setStatus(`Could not call the protected API. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (clientCredentialsButton) {
+      clientCredentialsButton.addEventListener("click", function () {
+        clientCredentials().catch(function (error) {
+          setStatus(`Could not request a client credentials token. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (callApiClientCredentialsButton) {
+      callApiClientCredentialsButton.addEventListener("click", function () {
+        callApi("api").catch(function (error) {
+          setStatus(`Could not call the protected API with the current token. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (introspectTokenButton) {
+      introspectTokenButton.addEventListener("click", function () {
+        introspectToken().catch(function (error) {
+          setStatus(`Could not introspect the token. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (revokeTokenButton) {
+      revokeTokenButton.addEventListener("click", function () {
+        revokeToken().catch(function (error) {
+          setStatus(`Could not revoke the token. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (userinfoButton) {
+      userinfoButton.addEventListener("click", function () {
+        userinfo().catch(function (error) {
+          setStatus(`Could not call UserInfo. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (deviceStartButton) {
+      deviceStartButton.addEventListener("click", function () {
+        startDeviceFlow().catch(function (error) {
+          setStatus(`Could not start the device flow. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (devicePollButton) {
+      devicePollButton.addEventListener("click", function () {
+        pollDeviceFlow().catch(function (error) {
+          setStatus(`Could not poll the device token endpoint. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (openLogoutButton) {
+      openLogoutButton.addEventListener("click", function () {
+        try {
+          openLogout();
+        } catch (error) {
+          setStatus(`Could not open the logout URL. (${error.message})`, true);
+        }
+      });
+    }
+
+    if (parButton) {
+      parButton.addEventListener("click", function () {
+        par().catch(function (error) {
+          setStatus(`Could not push the authorization request. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (tokenExchangeButton) {
+      tokenExchangeButton.addEventListener("click", function () {
+        tokenExchange().catch(function (error) {
+          setStatus(`Could not perform token exchange. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (cibaStartButton) {
+      cibaStartButton.addEventListener("click", function () {
+        cibaStart().catch(function (error) {
+          setStatus(`Could not start CIBA. (${error.message})`, true);
+        });
+      });
+    }
+
+    if (cibaPollButton) {
+      cibaPollButton.addEventListener("click", function () {
+        cibaPoll().catch(function (error) {
+          setStatus(`Could not poll CIBA. (${error.message})`, true);
         });
       });
     }
@@ -655,6 +1185,15 @@
     } else if (loadAuthCode()) {
       setCapturedCodeDisplay(loadAuthCode());
       setStatus("A captured authorization code is already available in this browser session.", false);
+    }
+
+    if (loadDeviceCode()) {
+      setDeviceCodeDisplay(loadDeviceCode());
+    }
+
+    const existingTokenResponse = loadTokenResponse();
+    if (existingTokenResponse && Object.keys(existingTokenResponse).length > 0) {
+      setTokenResponseDisplay(existingTokenResponse);
     }
   });
 })();

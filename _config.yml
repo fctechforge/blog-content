@@ -2,10 +2,10 @@ theme: jekyll-theme-chirpy
 lang: en
 timezone: Europe/Rome
 
-title: "FC Tech"
-tagline: "My Technical notes"
+title: "FC Tech Notes"
+tagline: "Passionate about technology, I write these notes to learn and remember what I have learnt."
 description: >-
-  My technical notes on security, APIs, AI, identity, systems, app development, anything interesting.
+  Technical notes on IAM, security, APIs, AI, distributed systems, and application design, written to learn new concepts and remember them clearly.
 
 url: "https://fctechforge.github.io"
 baseurl: "/blog-content"
