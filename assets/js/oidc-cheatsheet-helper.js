@@ -7,6 +7,7 @@
   const AUTH_FLOW_STORAGE_KEY = "oidc-cheatsheet-auth-flow";
   const DEVICE_CODE_STORAGE_KEY = "oidc-cheatsheet-device-code";
   const AUTH_REQ_ID_STORAGE_KEY = "oidc-cheatsheet-auth-req-id";
+  const OLD_EXAMPLE_POST_LOGOUT_REDIRECT_URI = "https://app.example.com/post-logout";
   const originalCode = new WeakMap();
 
   function byId(id) {
@@ -40,7 +41,7 @@
       scopes: "openid profile email",
       redirectUri: currentPageUrl(),
       apiBaseUrl: "https://api.example.com",
-      postLogoutRedirectUri: "https://app.example.com/post-logout"
+      postLogoutRedirectUri: currentPageUrl()
     };
   }
 
@@ -56,7 +57,11 @@
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return defaultFormValues();
-      return Object.assign(defaultFormValues(), JSON.parse(raw));
+      const values = Object.assign(defaultFormValues(), JSON.parse(raw));
+      if (values.postLogoutRedirectUri === OLD_EXAMPLE_POST_LOGOUT_REDIRECT_URI) {
+        values.postLogoutRedirectUri = currentPageUrl();
+      }
+      return values;
     } catch (_error) {
       return defaultFormValues();
     }
@@ -277,7 +282,7 @@
       { from: "https://api.example.com", to: values.apiBaseUrl },
       { from: "demo-client", to: values.clientId },
       { from: "http://127.0.0.1:8080/callback", to: values.redirectUri },
-      { from: "https://app.example.com/post-logout", to: values.postLogoutRedirectUri },
+      { from: OLD_EXAMPLE_POST_LOGOUT_REDIRECT_URI, to: values.postLogoutRedirectUri },
       { from: "$OIDC_METADATA_URL", to: values.discoveryUrl },
       { from: "$OAUTH_METADATA_URL", to: values.oauthMetadataUrl },
       { from: "$JWKS_URI", to: values.jwksUri },
@@ -391,7 +396,7 @@
     const scopes = scopesNode.value.trim() || "openid profile email";
     const redirectUri = redirectUriNode.value.trim() || "http://127.0.0.1:8080/callback";
     const apiBaseUrl = apiBaseUrlNode.value.trim() || "https://api.example.com";
-    const postLogoutRedirectUri = postLogoutNode.value.trim() || "https://app.example.com/post-logout";
+    const postLogoutRedirectUri = postLogoutNode.value.trim() || currentPageUrl();
 
     if (!discoveryUrl) {
       setStatus("Enter a discovery endpoint first.", true);
@@ -585,7 +590,7 @@
       latestMetadata.clientSecret = formValues.clientSecret || latestMetadata.clientSecret || "";
       latestMetadata.redirectUri = formValues.redirectUri || latestMetadata.redirectUri || currentPageUrl();
       latestMetadata.apiBaseUrl = formValues.apiBaseUrl || latestMetadata.apiBaseUrl || "https://api.example.com";
-      latestMetadata.postLogoutRedirectUri = formValues.postLogoutRedirectUri || latestMetadata.postLogoutRedirectUri || "https://app.example.com/post-logout";
+      latestMetadata.postLogoutRedirectUri = formValues.postLogoutRedirectUri || latestMetadata.postLogoutRedirectUri || currentPageUrl();
       applyValues(latestMetadata);
     }
     setStatus("Token response captured. The downstream commands below now use the returned tokens where applicable.", false);
@@ -783,7 +788,7 @@
     if (tokenResponse.id_token) {
       url.searchParams.set("id_token_hint", tokenResponse.id_token);
     }
-    url.searchParams.set("post_logout_redirect_uri", formValues.postLogoutRedirectUri || "https://app.example.com/post-logout");
+    url.searchParams.set("post_logout_redirect_uri", formValues.postLogoutRedirectUri || currentPageUrl());
     window.open(url.toString(), "oidc-helper-logout", "popup=yes,width=540,height=720,resizable=yes,scrollbars=yes");
   }
 
@@ -960,7 +965,7 @@
       metadata.scopes = storedValues.scopes || metadata.scopes || "openid profile email";
       metadata.redirectUri = storedValues.redirectUri || metadata.redirectUri || currentPageUrl();
       metadata.apiBaseUrl = storedValues.apiBaseUrl || metadata.apiBaseUrl || "https://api.example.com";
-      metadata.postLogoutRedirectUri = storedValues.postLogoutRedirectUri || metadata.postLogoutRedirectUri || "https://app.example.com/post-logout";
+      metadata.postLogoutRedirectUri = storedValues.postLogoutRedirectUri || metadata.postLogoutRedirectUri || currentPageUrl();
       applyValues(metadata);
     } else {
       const previewValues = {
@@ -969,7 +974,7 @@
         scopes: storedValues.scopes || "openid profile email",
         redirectUri: storedValues.redirectUri || currentPageUrl(),
         apiBaseUrl: storedValues.apiBaseUrl || "https://api.example.com",
-        postLogoutRedirectUri: storedValues.postLogoutRedirectUri || "https://app.example.com/post-logout",
+        postLogoutRedirectUri: storedValues.postLogoutRedirectUri || currentPageUrl(),
         issuer: issuerFromDiscovery(storedValues.discoveryUrl || "https://auth.example.com/.well-known/openid-configuration"),
         oauthMetadataUrl: storedValues.discoveryUrl
           ? issuerFromDiscovery(storedValues.discoveryUrl) + "/.well-known/oauth-authorization-server"
@@ -1176,7 +1181,7 @@
         latestMetadata.scopes = storedValues.scopes || latestMetadata.scopes || "openid profile email";
         latestMetadata.redirectUri = storedValues.redirectUri || latestMetadata.redirectUri || currentPageUrl();
         latestMetadata.apiBaseUrl = storedValues.apiBaseUrl || latestMetadata.apiBaseUrl || "https://api.example.com";
-        latestMetadata.postLogoutRedirectUri = storedValues.postLogoutRedirectUri || latestMetadata.postLogoutRedirectUri || "https://app.example.com/post-logout";
+        latestMetadata.postLogoutRedirectUri = storedValues.postLogoutRedirectUri || latestMetadata.postLogoutRedirectUri || currentPageUrl();
         applyValues(latestMetadata);
       }
       setStatus("Authorization code captured from the redirect. The token exchange command below now uses it.", false);

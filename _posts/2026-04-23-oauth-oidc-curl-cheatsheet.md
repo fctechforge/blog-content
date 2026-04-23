@@ -55,7 +55,7 @@ This helper is for reference and local testing only.
   <input id="oidc-api-base-url" class="form-control mb-3" type="text" value="https://api.example.com">
 
   <label for="oidc-post-logout-uri">Post logout redirect URI</label>
-  <input id="oidc-post-logout-uri" class="form-control mb-3" type="text" value="https://app.example.com/post-logout">
+  <input id="oidc-post-logout-uri" class="form-control mb-3" type="text" value="{{ page.url | absolute_url }}">
 
   <div class="d-flex gap-2 flex-wrap mt-3">
     <button id="oidc-import-button" class="btn btn-primary btn-sm" type="button">Import</button>
