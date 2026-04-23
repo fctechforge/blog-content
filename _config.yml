@@ -2,10 +2,10 @@ theme: jekyll-theme-chirpy
 lang: en
 timezone: Europe/Rome
 
-title: "FC Tech Forge"
-tagline: "Technical notes, theory, and labs"
+title: "FC Tech"
+tagline: "My Technical notes"
 description: >-
-  Technical notes, theory articles, and hands-on labs on security, APIs, AI, identity, and systems.
+  My technical notes on security, APIs, AI, identity, systems, app development, anything interesting.
 
 url: "https://fctechforge.github.io"
 baseurl: "/blog-content"
@@ -14,7 +14,7 @@ github:
   username: fctechforge
 
 social:
-  name: FC Tech Forge
+  name: FC
   email:
   links:
     - https://github.com/fctechforge
